@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Enrollment{% endblock %}
+{% block description %}Register your account and test the reliability of the system by filling in the following form.{%endblock %}
+
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    video {
+      background-color: grey;
+      width: 50%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .gallery {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+    }
+
+    .gallery div {
+      margin: 10px 20px;
+      height: 100%;
+    }
+
+    canvas {
+      background-color: grey;
+    }
+
+    .space {
+      height: 70px;
+      width: 10px;
+      background-color: transparent;
+    }
+
+    @media only screen and (max-width: 768px) {
+      video {
+        width: 100%;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="form-group row mb-3">
+  <label for="inputFirstName" class="col-sm-2 col-form-label">First name</label>
+  <div class="col-sm-10">
+    <input type="text" class="form-control" id="inputFirstName" placeholder="Mario">
+  </div>
+</div>
+<div class="form-group row mb-3">
+  <label for="inputLastName" class="col-sm-2 col-form-label">Last name</label>
+  <div class="col-sm-10">
+    <input type="text" class="form-control" id="inputLastName" placeholder="Rossi">
+  </div>
+</div>
+
+<div class="my-5">
+  <video autoplay id="video"></video>
+  <button type="button" class="btn btn-secondary mx-auto d-block m-3" id="send">Take photo</button>
+</div>
+
+<div class="mb-3">
+  <div>
+    <h2 class="pb-3 mb-4 border-bottom">Gallery</h2>
+    <p>Manage your photo, upload al least three photo in order to enroll in the system</p>
+    <div class="overflow-auto my-5 gallery" id="gallery">
+    </div>
+  </div>
+</div>
+
+<h2 class="pb-3 mb-4 border-bottom">Record your passphrase.</h2>
+<p>Manage your record, keep in mind your passphrase!</p>  
+<div class="my-5 col-md-12 text-center">
+    <button type="button" class="btn btn-danger" id="recordButton">Record</button>
+    <button type="button" class="btn btn-secondary" id="stopButton" disabled>Stop</button>
+</div>
+
+<ol id="recordingsList"></ol>
+
+<div class="space"></div>
+
+<div class="m-3 mb-4">
+  <button type="button" class="btn btn-primary btn-lg mx-auto d-block m-3" id="enroll">Enroll</button>
+</div>
+
+<script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+<script src="static/app.js"></script>
+
+<script type="text/javascript">
+    stopButton.addEventListener("click", stopRecording);
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+        video.srcObject = stream;
+        video.play();
+      });
+    }
+
+    let photo_counter = 0;
+
+    document.getElementById("send").addEventListener("click", function() {
+      if (photo_counter < 10) {
+        var video = document.getElementById('video');
+        var height = video.videoHeight;
+        var width = video.videoWidth;
+
+        while (width > 400 || height > 300) {
+          width = width * 0.95;
+          height = height * 0.95;
+        }
+
+        var canvas = document.createElement('canvas');
+        canvas.height = height;
+        canvas.width = width;
+        var context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, canvas.width, canvas.height);
+
+        var formdata = new FormData()
+        formdata.append("photo", canvas.toDataURL("image/jeg"))
+
+        var response;
+
+        $.ajax({
+          type: "POST",
+          url: "{{ url_for('check_photo') }}",
+          async: false,
+          data: formdata,
+          processData: false,
+          contentType: false,
+          success: function(responseData) { response = responseData; },
+          error: function(textStatus, errorThrown) {
+            console.error("Status: " + textStatus);
+            console.error("Error: " + errorThrown);
+            response = -1;
+          }
+        });
+
+        if (response == -1) {
+          alert("An internal error occurred, please try again");
+          return;
+        }
+
+        if (!response.startsWith("True")) {
+          alert(response);
+          return;
+        }
+
+        var container = document.createElement('div');
+
+        container.addEventListener("click", function() {
+          this.remove();
+          photo_counter--;
+        });
+
+        container.appendChild(canvas);
+        document.getElementById("gallery").appendChild(container);
+        photo_counter++;
+      } else {
+        alert("You cannot enter more than 10 photos!");
+      }      
+    });
+
+    document.getElementById("enroll").addEventListener("click", function() {
+      var firstName = document.getElementById("inputFirstName");
+
+      if (firstName.value.trim() === "") {
+        alert("Please enter your name!");
+        firstName.focus();
+        return false;
+      }
+
+      var lastName = document.getElementById("inputLastName");
+
+      if (lastName.value.trim() === "") {
+        alert("Please enter your last name!");
+        lastName.focus();
+        return false;
+      }
+
+      var photos = document.getElementsByTagName("canvas");
+
+      if (photos.length < 3) {
+        alert("Please enter at least three photo!");
+        return false;
+      }
+
+      if (document.getElementById("voice-0") == null) {
+        alert("Please record one passphrase!");
+        return flase;
+      }
+
+      var response = upload(photos);
+
+      if (typeof response !== "undefined") {
+        alert("An internal error occurred, please try again");
+        return;
+      }
+    });
+   
+    function upload(photos) {
+      formdata.append("first_name", document.getElementById("inputFirstName").value);
+      formdata.append("last_name", document.getElementById("inputLastName").value);
+
+
+      for(var i = 0; i < photos.length; i++) { 
+        formdata.append('photo'.concat("-", i+1), photos[i].toDataURL("image/jeg"));
+      }
+
+      //console.log(formdata);
+
+      $.ajax({
+        type: "POST",
+        url: "{{ url_for('upload') }}",
+        async: false,
+        data: formdata,
+        processData: false,
+        contentType: false,
+        success: function(responseData) { 
+          alert(responseData);
+          location.replace("/login")
+        },
+        error: function(textStatus, errorThrown) {
+          console.error("Status: " + textStatus);
+          console.error("Error: " + errorThrown);
+          return -1;
+        }
+      });
+    }
+
+</script>
+{% endblock %}

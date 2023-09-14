@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Evaluation{% endblock %}
+{% block description %}Hi {{session['username']}} you are logged in, below is the evaluation of the identification.{%endblock %}
+
+{% block head %}
+  {{ super() }}
+{% endblock %}
+
+{% block content %}
+<pre id="evaluation">
+  
+  {{ data }}
+  
+</pre>
+{% endblock %}

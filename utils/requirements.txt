@@ -1,0 +1,16 @@
+# https://www.jaided.ai/easyocr/documentation/
+pip3 install easyocr
+
+# https://github.com/ageitgey/face_recognition
+
+sudo apt install cmake
+
+# https://gist.github.com/ageitgey/629d75c1baac34dfa5ca2a1928a7aeaf
+git clone https://github.com/davisking/dlib.git
+# cd dlib
+# mkdir build; cd build; cmake ..; cmake --build .
+# cd ..
+sudo python3 setup.py install
+
+# https://face-recognition.readthedocs.io/en/latest/face_recognition.html
+pip3 install face_recognition
