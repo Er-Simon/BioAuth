@@ -1,0 +1,7 @@
+Flask==2.0.2
+Flask-Cors==3.0.10
+Flask-Session==0.4.0
+speechbrain==0.5.15
+face-recognition==1.3.0
+simplejson==3.16.0
+
